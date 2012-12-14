@@ -23,3 +23,7 @@ You can read more info if you wish in the [blog post][].
 ### ARC Support
 
 This class requires LLVM 4.0 with [Automatic Reference Counting (ARC)](http://clang.llvm.org/docs/AutomaticReferenceCounting.html), enabled by default in modern Xcode projects.
+
+### MapView Support
+So the original made bubbles but not for mapviews. This version merges code from [U10Int's fork](https://github.com/u10int/calloutview)
+and adds support to use a totally customized view as it's callout.
