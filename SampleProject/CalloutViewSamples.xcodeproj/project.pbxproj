@@ -17,6 +17,7 @@
 		01A1D514161129080021F8DD /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 01A1D513161129080021F8DD /* Default-568h@2x.png */; };
 		01A6EE6515D49BD500E895D6 /* SMCalloutView.m in Sources */ = {isa = PBXBuildFile; fileRef = 01A6EE6415D49BD500E895D6 /* SMCalloutView.m */; };
 		01A6EE7915D572C300E895D6 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01A6EE7815D572C300E895D6 /* QuartzCore.framework */; };
+		9BDFB758167BC81900794E52 /* UIImageExtensions.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BDFB757167BC81900794E52 /* UIImageExtensions.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,8 @@
 		01A6EE6315D49BD500E895D6 /* SMCalloutView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SMCalloutView.h; path = ../SMCalloutView.h; sourceTree = "<group>"; };
 		01A6EE6415D49BD500E895D6 /* SMCalloutView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SMCalloutView.m; path = ../SMCalloutView.m; sourceTree = "<group>"; };
 		01A6EE7815D572C300E895D6 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		9BDFB756167BC81900794E52 /* UIImageExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIImageExtensions.h; sourceTree = SOURCE_ROOT; };
+		9BDFB757167BC81900794E52 /* UIImageExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIImageExtensions.m; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +91,8 @@
 			children = (
 				017FD73E15D317A5006825B3 /* AppDelegate.h */,
 				017FD73D15D317A5006825B3 /* AppDelegate.m */,
+				9BDFB756167BC81900794E52 /* UIImageExtensions.h */,
+				9BDFB757167BC81900794E52 /* UIImageExtensions.m */,
 				017FD73915D31618006825B3 /* Supporting Files */,
 			);
 			name = Samples;
@@ -180,6 +185,7 @@
 				01A6EE6515D49BD500E895D6 /* SMCalloutView.m in Sources */,
 				017FD73F15D317B1006825B3 /* AppDelegate.m in Sources */,
 				017FD74015D317B1006825B3 /* main.m in Sources */,
+				9BDFB758167BC81900794E52 /* UIImageExtensions.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

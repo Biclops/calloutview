@@ -1,15 +1,9 @@
 #import "AppDelegate.h"
 #import <QuartzCore/QuartzCore.h>
 
-@implementation MapAnnotation @end
-
 @implementation AppDelegate {
-    UIScrollView *scrollView;
-    UIImageView *marsView;
-    MKPinAnnotationView *topPin;
     SMCalloutView *calloutView;
     MKMapView *bottomMapView;
-    MKPinAnnotationView *bottomPin;
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
@@ -22,31 +16,16 @@
     // Fill top half with a custom view (image) inside a scroll view along with a custom pin view that triggers our custom MTCalloutView.
     //
     
-    scrollView = [[UIScrollView alloc] initWithFrame:half];
-    scrollView.backgroundColor = [UIColor grayColor];
-    
-    marsView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"mars.jpg"]];
-    marsView.userInteractionEnabled = YES;
-    [marsView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(marsTapped)]];
-    
-    [scrollView addSubview:marsView];
-    scrollView.contentSize = marsView.frame.size;
-    scrollView.contentOffset = CGPointMake(150, 50);
-    
-    topPin = [[MKPinAnnotationView alloc] initWithAnnotation:nil reuseIdentifier:@""];
+    MKPinAnnotationView *topPin = [[MKPinAnnotationView alloc] initWithAnnotation:nil reuseIdentifier:@""];
     topPin.center = CGPointMake(half.size.width/2 + 230, half.size.height/2 + 100);
-    [topPin addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(topPinTapped)]];
-    [marsView addSubview:topPin];
-
-    UIButton *topDisclosure = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
-    [topDisclosure addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(disclosureTapped)]];
+    topPin.animatesDrop = YES;
     
     calloutView = [SMCalloutView new];
     calloutView.delegate = self;
     calloutView.title = @"Curiosity";
-    calloutView.rightAccessoryView = topDisclosure;
+    calloutView.subtitle = @"Mars Rover";
     calloutView.calloutOffset = topPin.calloutOffset;
-
+    
     //
     // Fill the bottom half of our window with a standard MKMapView with pin+callout for comparison
     //
@@ -54,90 +33,138 @@
     MapAnnotation *capeCanaveral = [MapAnnotation new];
     capeCanaveral.coordinate = (CLLocationCoordinate2D){28.388154, -80.604200};
     capeCanaveral.title = @"Cape Canaveral";
-
-    UIButton *bottomDisclosure = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
-    [bottomDisclosure addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(disclosureTapped)]];
-
-    bottomPin = [[MKPinAnnotationView alloc] initWithAnnotation:capeCanaveral reuseIdentifier:@""];
-    bottomPin.rightCalloutAccessoryView = bottomDisclosure;
-    bottomPin.canShowCallout = YES;
-
-    bottomMapView = [[MKMapView alloc] initWithFrame:CGRectOffset(half, 0, half.size.height)];
+    
+    bottomMapView = [[MKMapView alloc] initWithFrame:CGRectMake(0, 0, self.window.frame.size.width, self.window.frame.size.height)];
     bottomMapView.delegate = self;
     [bottomMapView addAnnotation:capeCanaveral];
+    [bottomMapView addGestureRecognizer:[[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)]];
     
     //
     // Put it all on the screen.
     //
-
-    [self.window addSubview:scrollView];
+    
     [self.window addSubview:bottomMapView];
     [self.window makeKeyAndVisible];
     return YES;
 }
 
-- (MKAnnotationView *)mapView:(MKMapView *)mapView viewForAnnotation:(id<MKAnnotation>)annotation {
-    // make sure to display our precreated pin that adds an accessory view.
-    return bottomPin;
+- (void)handleLongPress:(UIGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state != UIGestureRecognizerStateBegan) {
+        return;
+    }
+    
+	if([gestureRecognizer isMemberOfClass:[UILongPressGestureRecognizer class]] && (gestureRecognizer.state == UIGestureRecognizerStateEnded)) {
+		[bottomMapView removeGestureRecognizer:gestureRecognizer]; //avoid multiple pins to appear when holding on the screen
+    }
+    
+    CGPoint touchPoint = [gestureRecognizer locationInView:bottomMapView];
+    CLLocationCoordinate2D touchMapCoordinate = [bottomMapView convertPoint:touchPoint toCoordinateFromView:bottomMapView];
+	
+    MapAnnotation *annotation = [MapAnnotation new];
+    annotation.coordinate = touchMapCoordinate;
+    annotation.title = [NSString stringWithFormat:@"Dropped Pin"];
+    [bottomMapView addAnnotation:annotation];
+    
+    [bottomMapView selectAnnotation:annotation animated:YES];
 }
 
-- (void)topPinTapped {
-    // show our callout if it's not already shown!
+#pragma mark - MKMapView
+
+- (MKAnnotationView *)mapView:(MKMapView *)mapView viewForAnnotation:(id<MKAnnotation>)annotation {
+    
+    MKAnnotationView *annotationView = nil;
+    if([annotation isKindOfClass:[MapAnnotation class]]) {
+        MKPinAnnotationView *pinAnnotationView = (MKPinAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:@"annotation"];
+        if(pinAnnotationView == nil) {
+            pinAnnotationView = [[CustomPinAnnotationView alloc] initWithAnnotation:annotation reuseIdentifier:@"annotation"];
+        }
+        
+        pinAnnotationView.animatesDrop = YES;
+        annotationView = pinAnnotationView;
+    }
+    
+    return annotationView;
+}
+
+- (void)mapView:(MKMapView *)mapView didSelectAnnotationView:(MKAnnotationView *)view {
+    // dismiss out callout if it's already shown but on a different parent view
+    if (calloutView.window) {
+        [calloutView dismissCalloutAnimated:NO];
+    }
+    
     // now in this example we're going to introduce an artificial delay in order to make our popup feel identical to MKMapView.
     // MKMapView has a delay after tapping so that it can intercept a double-tap for zooming. We don't need that delay but we'll
     // add it just so things feel the same.
-    if (!calloutView.window)
-        [self performSelector:@selector(popupCalloutView) withObject:nil afterDelay:1.0/3.0];
+    [self performSelector:@selector(popupMapCalloutView:) withObject:view afterDelay:1.0/3.0];
 }
 
-- (void)popupCalloutView {
+- (void)mapView:(MKMapView *)mapView didDeselectAnnotationView:(MKAnnotationView *)view {
+    // again, we'll introduce an artifical delay to feel more like MKMapView for this demonstration.
+    [calloutView performSelector:@selector(dismissCalloutAnimated:) withObject:nil afterDelay:1.0/3.0];
+}
 
-    // This does all the magic.
-    [calloutView presentCalloutFromRect:topPin.frame
-                                 inView:marsView
-                      constrainedToView:scrollView
-               permittedArrowDirections:SMCalloutArrowDirectionDown
+#pragma mark - SMCalloutView
+- (void)popupMapCalloutView:(MKAnnotationView *)annotationView {
+    
+    // custom view to be used in our callout
+    UIView *customView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 100, 50)];
+    customView.backgroundColor = [UIColor colorWithWhite:1 alpha:1];
+    customView.layer.borderColor = [UIColor colorWithWhite:0 alpha:0.6].CGColor;
+    customView.layer.borderWidth = 1;
+    customView.layer.cornerRadius = 4;
+    
+    calloutView.calloutOffset = CGPointMake(0, -7.0f);
+    
+    // if you provide a custom view for the callout content, the title and subtitle will not be displayed
+    calloutView.contentView = customView;
+    
+    ((CustomPinAnnotationView *)annotationView).calloutView = calloutView;
+    [calloutView presentCalloutFromRect:annotationView.bounds
+                                 inView:annotationView
+                      constrainedToView:bottomMapView
+               permittedArrowDirections:SMCalloutArrowDirectionAny
                                animated:YES];
-    
-    // Here's an alternate method that adds the callout *inside* the pin view. This may seem strange, but it's how MKMapView
-    // does it. It brings the selected pin to the front, then pops up the callout inside the pin's view. This way, the callout
-    // is "anchored" to the pin itself. Visually, there's no difference; the callout still looks like it's floating outside the pin.
-    
-    // Note that this technique will require overriding -hitTest:withEvent inside the view containing the callout view, in order
-    // to send touches to any accessory views of the callout. See this thread for more discussion: https://github.com/nfarina/calloutview/issues/9
-    
-    // You'll notice this example won't let you click on the blue disclosure button because we're not overriding -hitTest.
-
-//    [calloutView presentCalloutFromRect:topPin.bounds
-//                                 inView:topPin
-//                      constrainedToView:scrollView
-//               permittedArrowDirections:SMCalloutArrowDirectionDown
-//                               animated:YES];
 }
 
 - (NSTimeInterval)calloutView:(SMCalloutView *)theCalloutView delayForRepositionWithSize:(CGSize)offset {
     
     // Uncomment this to cancel the popup
     // [calloutView dismissCalloutAnimated:NO];
+    
+    // if annotation view is coming from MKMapView, it's contained within a MKAnnotationContainerView instance
+    // so we need to adjust the map position so that the callout will be completely visible when displayed
+    if ([NSStringFromClass([calloutView.superview.superview class]) isEqualToString:@"MKAnnotationContainerView"]) {
+        CGFloat pixelsPerDegreeLat = bottomMapView.frame.size.height / bottomMapView.region.span.latitudeDelta;
+        CGFloat pixelsPerDegreeLon = bottomMapView.frame.size.width / bottomMapView.region.span.longitudeDelta;
 
-    [scrollView setContentOffset:CGPointMake(scrollView.contentOffset.x-offset.width, scrollView.contentOffset.y-offset.height) animated:YES];
+        CLLocationDegrees latitudinalShift = offset.height / pixelsPerDegreeLat;
+        CLLocationDegrees longitudinalShift = -(offset.width / pixelsPerDegreeLon);
+
+        CGFloat lat = bottomMapView.region.center.latitude + latitudinalShift;
+        CGFloat lon = bottomMapView.region.center.longitude + longitudinalShift;
+        CLLocationCoordinate2D newCenterCoordinate = (CLLocationCoordinate2D){lat, lon};
+        if (fabsf(newCenterCoordinate.latitude) <= 90 && fabsf(newCenterCoordinate.longitude <= 180)) {
+            [bottomMapView setCenterCoordinate:newCenterCoordinate animated:YES];
+        }
+    }
     
     return kSMCalloutViewRepositionDelayForUIScrollView;
 }
 
-- (void)disclosureTapped {
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Tap!" message:@"You tapped the disclosure button."
-                                                   delegate:nil cancelButtonTitle:nil otherButtonTitles:@"Whatevs",nil];
-    [alert show];
-}
-
-- (void)marsTapped {
-    // again, we'll introduce an artifical delay to feel more like MKMapView for this demonstration.
-    [self performSelector:@selector(dismissCallout) withObject:nil afterDelay:1.0/3.0];
-}
-
 - (void)dismissCallout {
     [calloutView dismissCalloutAnimated:NO];
+}
+
+@end
+
+@implementation MapAnnotation @end
+
+@implementation CustomPinAnnotationView
+
+// See this for more information: https://github.com/nfarina/calloutview/pull/9
+- (UIView *) hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *calloutMaybe = [self.calloutView hitTest:[self.calloutView convertPoint:point fromView:self] withEvent:event];
+    return calloutMaybe ?: [super hitTest:point withEvent:event];
 }
 
 @end
