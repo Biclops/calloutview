@@ -251,7 +251,6 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     _titleLabel.text = self.title;
     _subtitleLabel.text = self.subtitle;
 
-#warning stuff
     // size the callout to fit the width constraint as best as possible
     if(_generateDefaultBackground) {
         self.$size = [self sizeThatFits:CGSizeMake(constrainedRect.size.width, self.calloutHeight + 10)];
@@ -287,7 +286,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     // target view's coordinate system. make sure to offset the anchor point as requested if necessary.
     CGFloat anchorX = self.calloutOffset.x + CGRectGetMidX(rect);
     CGFloat anchorY = self.calloutOffset.y + (bestDirection == SMCalloutArrowDirectionDown ? CGRectGetMinY(rect) : CGRectGetMaxY(rect));
-
+    
     // we prefer to sit in the exact center of our constrained view, so we have visually pleasing equal left/right margins.
     CGFloat calloutX = roundf(CGRectGetMidX(constrainedRect) - self.$width / 2);
 
@@ -320,7 +319,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     }
     
     CGPoint calloutOrigin = {
-        .x = calloutX + adjustX,
+        .x = _generateDefaultBackground ? calloutX + adjustX : -self.$width*0.5f + self.calloutOffset.x,
         .y = bestDirection == SMCalloutArrowDirectionDown ? (anchorY - self.calloutHeight + bottomMargin) : anchorY
     };
 
@@ -338,7 +337,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     // layout now so we can immediately start animating to the final position if needed
     [self setNeedsLayout];
     [self layoutIfNeeded];
-
+    
     // if we're outside the bounds of our constraint rect, we'll give our delegate an opportunity to shift us into position.
     // consider both our size and the size of our target rect (which we'll assume to be the size of the content you want to scroll into view.
     CGRect contentRect = CGRectUnion(self.frame, CGRectInset(rect, -10, -10));
@@ -526,7 +525,6 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
         [self sendSubviewToBack:_backgroundView];
     }
     else {
-#warning stuff
         self.contentView.$origin = CGPointMake(0, 0);
     }
 }

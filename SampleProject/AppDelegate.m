@@ -92,10 +92,12 @@
         [calloutView dismissCalloutAnimated:NO];
     }
     
-    // now in this example we're going to introduce an artificial delay in order to make our popup feel identical to MKMapView.
-    // MKMapView has a delay after tapping so that it can intercept a double-tap for zooming. We don't need that delay but we'll
-    // add it just so things feel the same.
-    [self performSelector:@selector(popupMapCalloutView:) withObject:view afterDelay:1.0/3.0];
+    if([view isKindOfClass:[CustomPinAnnotationView class]]) {
+        // now in this example we're going to introduce an artificial delay in order to make our popup feel identical to MKMapView.
+        // MKMapView has a delay after tapping so that it can intercept a double-tap for zooming. We don't need that delay but we'll
+        // add it just so things feel the same.
+        [self performSelector:@selector(popupMapCalloutView:) withObject:view afterDelay:1.0/3.0];
+    }
 }
 
 - (void)mapView:(MKMapView *)mapView didDeselectAnnotationView:(MKAnnotationView *)view {
@@ -104,21 +106,21 @@
 }
 
 #pragma mark - SMCalloutView
-- (void)popupMapCalloutView:(MKAnnotationView *)annotationView {
+- (void)popupMapCalloutView:(CustomPinAnnotationView *)annotationView {
     
     // custom view to be used in our callout
-    UIView *customView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 100, 50)];
+    UIView *customView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 250, 50)];
     customView.backgroundColor = [UIColor colorWithWhite:1 alpha:1];
     customView.layer.borderColor = [UIColor colorWithWhite:0 alpha:0.6].CGColor;
     customView.layer.borderWidth = 1;
     customView.layer.cornerRadius = 4;
     
-    calloutView.calloutOffset = CGPointMake(0, -7.0f);
+    calloutView.calloutOffset = CGPointMake(-annotationView.calloutOffset.x, -7.0f);
     
     // if you provide a custom view for the callout content, the title and subtitle will not be displayed
     calloutView.contentView = customView;
     
-    ((CustomPinAnnotationView *)annotationView).calloutView = calloutView;
+    annotationView.calloutView = calloutView;
     [calloutView presentCalloutFromRect:annotationView.bounds
                                  inView:annotationView
                       constrainedToView:bottomMapView
@@ -143,7 +145,7 @@
         CGFloat lat = bottomMapView.region.center.latitude + latitudinalShift;
         CGFloat lon = bottomMapView.region.center.longitude + longitudinalShift;
         CLLocationCoordinate2D newCenterCoordinate = (CLLocationCoordinate2D){lat, lon};
-        if (fabsf(newCenterCoordinate.latitude) <= 90 && fabsf(newCenterCoordinate.longitude <= 180)) {
+        if (fabsf(newCenterCoordinate.latitude) <= 90 && fabsf(newCenterCoordinate.longitude) <= 180) {
             [bottomMapView setCenterCoordinate:newCenterCoordinate animated:YES];
         }
     }
@@ -157,7 +159,8 @@
 
 @end
 
-@implementation MapAnnotation @end
+@implementation MapAnnotation
+@end
 
 @implementation CustomPinAnnotationView
 
