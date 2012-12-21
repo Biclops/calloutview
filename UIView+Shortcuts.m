@@ -8,9 +8,8 @@
 
 #import "UIView+Shortcuts.h"
 
-
 //
-// Our UIView frame helpers implementation
+// UIView shortcuts - shorten the code
 //
 
 @implementation UIView (Shortcuts)

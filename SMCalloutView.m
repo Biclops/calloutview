@@ -20,10 +20,19 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     if (self = [super initWithFrame:frame]) {
         _presentAnimation = SMCalloutAnimationBounce;
         _dismissAnimation = SMCalloutAnimationFade;
+        
+        // default
+        _margins = CGPointMake(10, 10);
+        
         self.backgroundColor = [UIColor clearColor];
     }
 
     return self;
+}
+
+#pragma mark - layout/offsets/sizing
+- (void)layoutSubviews {
+    self.contentView.$origin = CGPointMake(0, 0);
 }
 
 - (void)rebuildSubviews {
@@ -50,6 +59,20 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     CGFloat nudgeLeft = fminf(0, CGRectGetMaxX(outerRect) - CGRectGetMaxX(innerRect));
     CGFloat nudgeTop = fmaxf(0, CGRectGetMinY(outerRect) - CGRectGetMinY(innerRect));
     CGFloat nudgeBottom = fminf(0, CGRectGetMaxY(outerRect) - CGRectGetMaxY(innerRect));
+    
+    if(nudgeLeft != 0) {
+        nudgeLeft -= _margins.x;
+    }
+    if(nudgeRight != 0) {
+        nudgeRight += _margins.x;
+    }
+    if(nudgeTop != 0) {
+        nudgeTop += _margins.y;
+    }
+    if(nudgeBottom != 0) {
+        nudgeBottom -= _margins.y;
+    }
+    
     return CGSizeMake(nudgeLeft ? : nudgeRight, nudgeTop ? : nudgeBottom);
 }
 
@@ -184,6 +207,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     [self.layer addAnimation:animation forKey:@"present"];
 }
 
+#pragma mark - animation
 - (void)animationDidStart:(CAAnimation *)anim {
     BOOL presenting = [[anim valueForKey:@"presenting"] boolValue];
 
@@ -208,37 +232,6 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
         if ([_delegate respondsToSelector:@selector(calloutViewDidDisappear:)]) {
             [_delegate calloutViewDidDisappear:self];
         }
-    }
-}
-
-- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
-    // we want to match the system callout view, which doesn't "capture" touches outside the accessory areas. This way you can click on other pins and things *behind* a translucent callout.
-    return [self.contentView pointInside:[self.contentView convertPoint:point fromView:self] withEvent:nil];
-}
-
-- (void)dismissCalloutAnimated:(BOOL)animated {
-    [self.layer removeAnimationForKey:@"present"];
-
-    _popupCancelled = YES;
-
-    if (animated) {
-        CAAnimation *animation = [self animationWithType:self.dismissAnimation presenting:NO];
-        animation.delegate = self;
-        [self.layer addAnimation:animation forKey:@"dismiss"];
-    }
-    else {[self removeFromParent]; }
-}
-
-- (void)removeFromParent {
-    if (self.superview) {
-        [self removeFromSuperview];
-    }
-    else {
-        // removing a layer from a superlayer causes an implicit fade-out animation that we wish to disable.
-        [CATransaction begin];
-        [CATransaction setDisableActions:YES];
-        [self.layer removeFromSuperlayer];
-        [CATransaction commit];
     }
 }
 
@@ -282,8 +275,38 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     return animation;
 }
 
-- (void)layoutSubviews {
-    self.contentView.$origin = CGPointMake(0, 0);
+#pragma mark - callout dismissal
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
+    // we want to match the system callout view, which doesn't "capture" touches outside the accessory areas. This way you can click on other pins and things *behind* a translucent callout.
+    return [self.contentView pointInside:[self.contentView convertPoint:point fromView:self] withEvent:nil];
+}
+
+- (void)dismissCalloutAnimated:(BOOL)animated {
+    [self.layer removeAnimationForKey:@"present"];
+    
+    _popupCancelled = YES;
+    
+    if (animated) {
+        CAAnimation *animation = [self animationWithType:self.dismissAnimation presenting:NO];
+        animation.delegate = self;
+        [self.layer addAnimation:animation forKey:@"dismiss"];
+    }
+    else {
+        [self removeFromParent];
+    }
+}
+
+- (void)removeFromParent {
+    if (self.superview) {
+        [self removeFromSuperview];
+    }
+    else {
+        // removing a layer from a superlayer causes an implicit fade-out animation that we wish to disable.
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        [self.layer removeFromSuperlayer];
+        [CATransaction commit];
+    }
 }
 
 @end
