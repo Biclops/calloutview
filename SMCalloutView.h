@@ -1,14 +1,5 @@
 #import <UIKit/UIKit.h>
 
-/*
-
-SMCalloutView
--------------
-Created by Nick Farina (nfarina@gmail.com)
-Version 1.1
-
-*/
-
 // options for which directions the callout is allowed to "point" in.
 enum {
     SMCalloutArrowDirectionUp = 1UL << 0,
@@ -38,8 +29,6 @@ extern NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView;
 @interface SMCalloutView : UIView
 
 @property (nonatomic, unsafe_unretained) id<SMCalloutViewDelegate> delegate;
-@property (nonatomic, copy) NSString *title, *subtitle; // title/titleView relationship mimics UINavigationBar.
-@property (nonatomic, retain) UIView *leftAccessoryView, *rightAccessoryView;
 
 // Custom title/subtitle views. if these are set, the respective title/subtitle properties will be ignored.
 // Keep in mind that SMCalloutView calls -sizeThatFits on titleView/subtitleView if defined, so your view

@@ -22,8 +22,6 @@
     
     calloutView = [SMCalloutView new];
     calloutView.delegate = self;
-    calloutView.title = @"Curiosity";
-    calloutView.subtitle = @"Mars Rover";
     calloutView.calloutOffset = topPin.calloutOffset;
     
     //

@@ -125,32 +125,14 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
             [self addSubview:self.subtitleViewOrDefault];
         }
     }
-
-    if (self.leftAccessoryView) {
-        [self addSubview:self.leftAccessoryView];
-    }
-
-    if (self.rightAccessoryView) {
-        [self addSubview:self.rightAccessoryView];
-    }
 }
 
 - (CGFloat)innerContentMarginLeft {
-    if (self.leftAccessoryView) {
-        return ACCESSORY_MARGIN + self.leftAccessoryView.$width + TITLE_ACCESSORY_MARGIN;
-    }
-    else {
-        return TITLE_MARGIN;
-    }
+    return TITLE_MARGIN;
 }
 
 - (CGFloat)innerContentMarginRight {
-    if (self.rightAccessoryView) {
-        return ACCESSORY_MARGIN + self.rightAccessoryView.$width + TITLE_ACCESSORY_MARGIN;
-    }
-    else {
-        return TITLE_MARGIN;
-    }
+    return TITLE_MARGIN;
 }
 
 - (CGFloat)calloutHeight {
@@ -204,11 +186,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     else {
         // ok we have no title or subtitle to speak of. In this case, the system callout would actually not display
         // at all! But we can handle it.
-        preferredWidth = self.leftAccessoryView.$width + self.rightAccessoryView.$width + ACCESSORY_MARGIN * 2;
-
-        if (self.leftAccessoryView && self.rightAccessoryView) {
-            preferredWidth += BETWEEN_ACCESSORIES_MARGIN;
-        }
+        preferredWidth = ACCESSORY_MARGIN * 2;
     }
 
     // ensure we're big enough to fit our graphics!
@@ -246,10 +224,6 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
 
     // form our subviews based on our content set so far
     [self rebuildSubviews];
-
-    // apply title/subtitle (if present
-    _titleLabel.text = self.title;
-    _subtitleLabel.text = self.subtitle;
 
     // size the callout to fit the width constraint as best as possible
     if(_generateDefaultBackground) {
@@ -402,11 +376,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
 
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
     // we want to match the system callout view, which doesn't "capture" touches outside the accessory areas. This way you can click on other pins and things *behind* a translucent callout.
-    return
-        [self.leftAccessoryView pointInside:[self.leftAccessoryView convertPoint:point fromView:self] withEvent:nil] ||
-        [self.rightAccessoryView pointInside:[self.rightAccessoryView convertPoint:point fromView:self] withEvent:nil] ||
-        [self.titleView pointInside:[self.titleView convertPoint:point fromView:self] withEvent:nil] ||
-        [self.subtitleView pointInside:[self.subtitleView convertPoint:point fromView:self] withEvent:nil];
+    return [self.contentView pointInside:[self.contentView convertPoint:point fromView:self] withEvent:nil];
 }
 
 - (void)dismissCalloutAnimated:(BOOL)animated {
@@ -489,30 +459,12 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
         CGFloat dy = arrowDirection == SMCalloutArrowDirectionUp ? TOP_ANCHOR_MARGIN : 0;
 
         self.titleViewOrDefault.$x = self.innerContentMarginLeft;
-        self.titleViewOrDefault.$y = (self.subtitleView || self.subtitle.length ? TITLE_SUB_TOP : TITLE_TOP) + dy;
+        self.titleViewOrDefault.$y = TITLE_TOP + dy;
         self.titleViewOrDefault.$width = self.$width - self.innerContentMarginLeft - self.innerContentMarginRight;
 
         self.subtitleViewOrDefault.$x = self.titleViewOrDefault.$x;
         self.subtitleViewOrDefault.$y = SUBTITLE_TOP + dy;
         self.subtitleViewOrDefault.$width = self.titleViewOrDefault.$width;
-
-        self.leftAccessoryView.$x = ACCESSORY_MARGIN;
-
-        if (self.contentView) {
-            self.leftAccessoryView.$y = TITLE_TOP + [self centeredPositionOfView:self.leftAccessoryView relativeToView:self.contentView] + dy;
-        }
-        else {
-            self.leftAccessoryView.$y = ACCESSORY_TOP + [self centeredPositionOfView:self.leftAccessoryView ifSmallerThan:ACCESSORY_HEIGHT] + dy;
-        }
-
-        self.rightAccessoryView.$x = self.$width - ACCESSORY_MARGIN - self.rightAccessoryView.$width;
-
-        if (self.contentView) {
-            self.rightAccessoryView.$y = TITLE_TOP + [self centeredPositionOfView:self.rightAccessoryView relativeToView:self.contentView] + dy;
-        }
-        else {
-            self.rightAccessoryView.$y = ACCESSORY_TOP + [self centeredPositionOfView:self.rightAccessoryView ifSmallerThan:ACCESSORY_HEIGHT] + dy;
-        }
 
         if (self.contentView) {
             self.contentView.$x = self.innerContentMarginLeft;
