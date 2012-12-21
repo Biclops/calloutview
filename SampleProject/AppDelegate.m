@@ -24,6 +24,14 @@
     calloutView.delegate = self;
     calloutView.calloutOffset = topPin.calloutOffset;
     
+    // custom view to be used in our callout
+    UIView *customView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 250, 50)];
+    customView.backgroundColor = [UIColor whiteColor];
+    customView.layer.borderColor = [UIColor blackColor].CGColor;
+    customView.layer.borderWidth = 1;
+    customView.layer.cornerRadius = 4;
+    calloutView.contentView = customView;
+    
     //
     // Fill the bottom half of our window with a standard MKMapView with pin+callout for comparison
     //
@@ -106,30 +114,17 @@
 #pragma mark - SMCalloutView
 - (void)popupMapCalloutView:(CustomPinAnnotationView *)annotationView {
     
-    // custom view to be used in our callout
-    UIView *customView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 250, 50)];
-    customView.backgroundColor = [UIColor colorWithWhite:1 alpha:1];
-    customView.layer.borderColor = [UIColor colorWithWhite:0 alpha:0.6].CGColor;
-    customView.layer.borderWidth = 1;
-    customView.layer.cornerRadius = 4;
-    
     calloutView.calloutOffset = CGPointMake(-annotationView.calloutOffset.x, -7.0f);
-    
-    // if you provide a custom view for the callout content, the title and subtitle will not be displayed
-    calloutView.contentView = customView;
     
     annotationView.calloutView = calloutView;
     [calloutView presentCalloutFromRect:annotationView.bounds
                                  inView:annotationView
                       constrainedToView:bottomMapView
-               permittedArrowDirections:SMCalloutArrowDirectionAny
+               permittedArrowDirections:SMCalloutArrowDirectionDown
                                animated:YES];
 }
 
 - (NSTimeInterval)calloutView:(SMCalloutView *)theCalloutView delayForRepositionWithSize:(CGSize)offset {
-    
-    // Uncomment this to cancel the popup
-    // [calloutView dismissCalloutAnimated:NO];
     
     // if annotation view is coming from MKMapView, it's contained within a MKAnnotationContainerView instance
     // so we need to adjust the map position so that the callout will be completely visible when displayed

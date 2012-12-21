@@ -30,12 +30,6 @@ extern NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView;
 
 @property (nonatomic, unsafe_unretained) id<SMCalloutViewDelegate> delegate;
 
-// Custom title/subtitle views. if these are set, the respective title/subtitle properties will be ignored.
-// Keep in mind that SMCalloutView calls -sizeThatFits on titleView/subtitleView if defined, so your view
-// may be resized as a result of that (especially if you're using UILabel/UITextField). You may want to subclass
-// and override -sizeThatFits, or just wrap your view in a "generic" UIView if you do not want it to be auto-sized.
-@property (nonatomic, retain) UIView *titleView, *subtitleView;
-
 // Custom "content" view that can be any width/height. If this is set, title/subtitle/titleView/subtitleView are all ignored.
 @property (nonatomic, retain) UIView *contentView;
 
@@ -43,8 +37,6 @@ extern NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView;
 @property (nonatomic, assign) CGPoint calloutOffset;
 
 @property (nonatomic, assign) SMCalloutAnimation presentAnimation, dismissAnimation; // default SMCalloutAnimationBounce, SMCalloutAnimationFade respectively
-
-@property (nonatomic, assign) BOOL generateDefaultBackground;
 
 // Presents a callout view by adding it to "inView" and pointing at the given rect of inView's bounds.
 // Constrains the callout to the bounds of the given view. Optionally scrolls the given rect into view (plus margins)

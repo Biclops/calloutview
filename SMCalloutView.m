@@ -1,17 +1,7 @@
 #import "SMCalloutView.h"
 #import <QuartzCore/QuartzCore.h>
 #import "UIImageExtensions.h"
-
-//
-// UIView frame helpers - we do a lot of UIView frame fiddling in this class; these functions help keep things readable.
-//
-
-@interface UIView (SMFrameAdditions)
-@property (nonatomic, assign) CGPoint $origin;
-@property (nonatomic, assign) CGSize $size;
-@property (nonatomic, assign) CGFloat $x, $y, $width, $height;      // normal rect properties
-@property (nonatomic, assign) CGFloat $left, $top, $right, $bottom; // these will stretch/shrink the rect
-@end
+#import "UIView+Shortcuts.h"
 
 //
 // Callout View.
@@ -19,37 +9,11 @@
 
 NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
 
-#define CALLOUT_MIN_WIDTH 75         // our background graphics limit us to this minimum width...
-#define CALLOUT_HEIGHT 70            // ...and allow only for this exact height.
-#define CALLOUT_DEFAULT_WIDTH 153    // default "I give up" width when we are asked to present in a space less than our min width
-#define TITLE_MARGIN 17              // the title view's normal horizontal margin from the edges of our callout view
-#define TITLE_TOP 11                 // the top of the title view when no subtitle is present
-#define TITLE_SUB_TOP 3              // the top of the title view when a subtitle IS present
-#define TITLE_HEIGHT 22              // title height, fixed
-#define SUBTITLE_TOP 25              // the top of the subtitle, when present
-#define SUBTITLE_HEIGHT 16           // subtitle height, fixed
-#define TITLE_ACCESSORY_MARGIN 6     // the margin between the title and an accessory if one is present (on either side)
-#define ACCESSORY_MARGIN 14          // the accessory's margin from the edges of our callout view
-#define ACCESSORY_TOP 8              // the top of the accessory "area" in which accessory views are placed
-#define ACCESSORY_HEIGHT 32          // the "suggested" maximum height of an accessory view. shorter accessories will be vertically centered
-#define BETWEEN_ACCESSORIES_MARGIN 7 // if we have no title or subtitle, but have two accessory views, then this is the space between them
 #define ANCHOR_MARGIN 37             // the smallest possible distance from the edge of our control to the "tip" of the anchor, from either left or right
-#define TOP_ANCHOR_MARGIN 13         // all the above measurements assume a bottom anchor! if we're pointing "up" we'll need to add this top margin to everything.
-#define BOTTOM_ANCHOR_MARGIN 10      // if using a bottom anchor, we'll need to account for the shadow below the "tip"
-#define CONTENT_MARGIN 10            // when we try to reposition content to be visible, we'll consider this margin around your target rect
-
-#define TOP_SHADOW_BUFFER 2          // height offset buffer to account for top shadow
-#define BOTTOM_SHADOW_BUFFER 5       // height offset buffer to account for bottom shadow
-#define OFFSET_FROM_ORIGIN 5         // distance to offset vertically from the rect origin of the callout
-#define ANCHOR_HEIGHT 14             // height to use for the anchor
-#define ANCHOR_MARGIN_MIN 24         // the smallest possible distance from the edge of our control to the edge of the anchor, from either left or right
 
 @implementation SMCalloutView {
-    UILabel *_titleLabel, *_subtitleLabel;
-    UIImageView *leftCap, *rightCap, *topAnchor, *bottomAnchor, *leftBackground, *rightBackground;
-    SMCalloutArrowDirection arrowDirection;
-    BOOL popupCancelled;
-    UIImageView *_backgroundView;
+    SMCalloutArrowDirection _arrowDirection;
+    BOOL _popupCancelled;
 }
 
 - (id)initWithFrame:(CGRect)frame {
@@ -57,55 +21,9 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
         _presentAnimation = SMCalloutAnimationBounce;
         _dismissAnimation = SMCalloutAnimationFade;
         self.backgroundColor = [UIColor clearColor];
-
-        _generateDefaultBackground = NO;
     }
 
     return self;
-}
-
-- (UIView *)titleViewOrDefault {
-    if (self.titleView) {
-        // if you have a custom title view defined, return that.
-        return self.titleView;
-    }
-    else {
-        if (!_titleLabel) {
-            // create a default titleView
-            _titleLabel = [UILabel new];
-            _titleLabel.$height = TITLE_HEIGHT;
-            _titleLabel.opaque = NO;
-            _titleLabel.backgroundColor = [UIColor clearColor];
-            _titleLabel.font = [UIFont boldSystemFontOfSize:17];
-            _titleLabel.textColor = [UIColor whiteColor];
-            _titleLabel.shadowColor = [UIColor colorWithWhite:0 alpha:0.5];
-            _titleLabel.shadowOffset = CGSizeMake(0, -1);
-        }
-
-        return _titleLabel;
-    }
-}
-
-- (UIView *)subtitleViewOrDefault {
-    if (self.subtitleView) {
-        // if you have a custom subtitle view defined, return that.
-        return self.subtitleView;
-    }
-    else {
-        if (!_subtitleLabel) {
-            // create a default subtitleView
-            _subtitleLabel = [UILabel new];
-            _subtitleLabel.$height = SUBTITLE_HEIGHT;
-            _subtitleLabel.opaque = NO;
-            _subtitleLabel.backgroundColor = [UIColor clearColor];
-            _subtitleLabel.font = [UIFont systemFontOfSize:12];
-            _subtitleLabel.textColor = [UIColor whiteColor];
-            _subtitleLabel.shadowColor = [UIColor colorWithWhite:0 alpha:0.5];
-            _subtitleLabel.shadowOffset = CGSizeMake(0, -1);
-        }
-
-        return _subtitleLabel;
-    }
 }
 
 - (void)rebuildSubviews {
@@ -116,84 +34,15 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     if (self.contentView) {
         [self addSubview:self.contentView];
     }
-    else {
-        if (self.titleViewOrDefault) {
-            [self addSubview:self.titleViewOrDefault];
-        }
-
-        if (self.subtitleViewOrDefault) {
-            [self addSubview:self.subtitleViewOrDefault];
-        }
-    }
-}
-
-- (CGFloat)innerContentMarginLeft {
-    return TITLE_MARGIN;
-}
-
-- (CGFloat)innerContentMarginRight {
-    return TITLE_MARGIN;
 }
 
 - (CGFloat)calloutHeight {
-    CGFloat height = CALLOUT_HEIGHT;
-
-    if(_generateDefaultBackground) {
-        if (self.contentView) {
-            height = self.contentView.$height + TITLE_TOP * 2;
-            // account for anchor that's also part of the view
-            height += ANCHOR_HEIGHT + BOTTOM_ANCHOR_MARGIN;
-        }
-    }
-    else {
-        height = self.contentView.frame.size.height;
-    }
-
+    CGFloat height = self.contentView.frame.size.height;
     return height;
 }
 
 - (CGSize)sizeThatFits:(CGSize)size {
-    // odd behavior, but mimicking the system callout view
-    if (size.width < CALLOUT_MIN_WIDTH) {
-        return CGSizeMake(CALLOUT_DEFAULT_WIDTH, self.calloutHeight);
-    }
-
-    // calculate how much non-negotiable space we need to reserve for margin and accessories
-    CGFloat margin = self.innerContentMarginLeft + self.innerContentMarginRight;
-
-    // how much room is left for text?
-    CGFloat availableWidthForText = size.width - margin;
-
-    // no room for text? then we'll have to squeeze into the given size somehow.
-    if (availableWidthForText < 0) {
-        availableWidthForText = 0;
-    }
-
-    CGSize preferredTitleSize = [self.titleViewOrDefault sizeThatFits:CGSizeMake(availableWidthForText, TITLE_HEIGHT)];
-    CGSize preferredSubtitleSize = [self.subtitleViewOrDefault sizeThatFits:CGSizeMake(availableWidthForText, SUBTITLE_HEIGHT)];
-
-    // total width we'd like
-    CGFloat preferredWidth;
-
-    if (self.contentView) {
-        // if we have a content view, then take our preferred size directly from that
-        preferredWidth = self.contentView.$width + margin;
-    }
-    else if ((preferredTitleSize.width >= 0.000001) || (preferredSubtitleSize.width >= 0.000001)) {
-        // if we have a title or subtitle, then our assumed margins are valid, and we can apply them
-        preferredWidth = fmaxf(preferredTitleSize.width, preferredSubtitleSize.width) + margin;
-    }
-    else {
-        // ok we have no title or subtitle to speak of. In this case, the system callout would actually not display
-        // at all! But we can handle it.
-        preferredWidth = ACCESSORY_MARGIN * 2;
-    }
-
-    // ensure we're big enough to fit our graphics!
-    preferredWidth = fmaxf(preferredWidth, CALLOUT_MIN_WIDTH);
-
-    // ask to be smaller if we have space, otherwise we'll fit into what we have by truncating the title/subtitle.
-    return CGSizeMake(fminf(preferredWidth, size.width), self.calloutHeight);
+    return self.contentView.bounds.size;
 }
 
 - (CGSize)offsetToContainRect:(CGRect)innerRect inRect:(CGRect)outerRect {
@@ -226,12 +75,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     [self rebuildSubviews];
 
     // size the callout to fit the width constraint as best as possible
-    if(_generateDefaultBackground) {
-        self.$size = [self sizeThatFits:CGSizeMake(constrainedRect.size.width, self.calloutHeight + 10)];
-    }
-    else {
-        self.$size = _contentView.frame.size;
-    }
+    self.$size = _contentView.frame.size;
     
     // how much room do we have in the constraint box, both above and below our target rect?
     CGFloat topSpace = CGRectGetMinY(rect) - CGRectGetMinY(constrainedRect);
@@ -252,9 +96,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     }
 
     // show the correct anchor based on our decision
-    topAnchor.hidden = (bestDirection == SMCalloutArrowDirectionDown);
-    bottomAnchor.hidden = (bestDirection == SMCalloutArrowDirectionUp);
-    arrowDirection = bestDirection;
+    _arrowDirection = bestDirection;
 
     // we want to point directly at the horizontal center of the given rect. calculate our "anchor point" in terms of our
     // target view's coordinate system. make sure to offset the anchor point as requested if necessary.
@@ -287,14 +129,9 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
         [layer addSublayer:self.layer];
     }
     
-    float bottomMargin = 0.0f;
-    if(_generateDefaultBackground) {
-        bottomMargin = BOTTOM_ANCHOR_MARGIN;
-    }
-    
     CGPoint calloutOrigin = {
-        .x = _generateDefaultBackground ? calloutX + adjustX : -self.$width*0.5f + self.calloutOffset.x,
-        .y = bestDirection == SMCalloutArrowDirectionDown ? (anchorY - self.calloutHeight + bottomMargin) : anchorY
+        .x = -self.$width*0.5f + self.calloutOffset.x,
+        .y = bestDirection == SMCalloutArrowDirectionDown ? (anchorY - self.calloutHeight) : anchorY
     };
 
     self.$origin = calloutOrigin;
@@ -318,7 +155,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     CGSize offset = [self offsetToContainRect:contentRect inRect:constrainedRect];
 
     NSTimeInterval delay = 0;
-    popupCancelled = NO; // reset this before calling our delegate below
+    _popupCancelled = NO; // reset this before calling our delegate below
 
     if ([self.delegate respondsToSelector:@selector(calloutView:delayForRepositionWithSize:)] && !CGSizeEqualToSize(offset, CGSizeZero)) {
         delay = [self.delegate calloutView:self delayForRepositionWithSize:offset];
@@ -326,7 +163,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
 
     // there's a chance that user code in the delegate method may have called -dismissCalloutAnimated to cancel things; if that
     // happened then we need to bail!
-    if (popupCancelled) {
+    if (_popupCancelled) {
         return;
     }
 
@@ -382,7 +219,7 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
 - (void)dismissCalloutAnimated:(BOOL)animated {
     [self.layer removeAnimationForKey:@"present"];
 
-    popupCancelled = YES;
+    _popupCancelled = YES;
 
     if (animated) {
         CAAnimation *animation = [self animationWithType:self.dismissAnimation presenting:NO];
@@ -445,395 +282,8 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
     return animation;
 }
 
-- (CGFloat)centeredPositionOfView:(UIView *)view ifSmallerThan:(CGFloat)height {
-    return view.$height < height ? floorf(height / 2 - view.$height / 2) : 0;
-}
-
-- (CGFloat)centeredPositionOfView:(UIView *)view relativeToView:(UIView *)parentView {
-    return (parentView.$height - view.$height) / 2;
-}
-
 - (void)layoutSubviews {
-    if (_generateDefaultBackground) {    
-        // if we're pointing up, we'll need to push almost everything down a bit
-        CGFloat dy = arrowDirection == SMCalloutArrowDirectionUp ? TOP_ANCHOR_MARGIN : 0;
-
-        self.titleViewOrDefault.$x = self.innerContentMarginLeft;
-        self.titleViewOrDefault.$y = TITLE_TOP + dy;
-        self.titleViewOrDefault.$width = self.$width - self.innerContentMarginLeft - self.innerContentMarginRight;
-
-        self.subtitleViewOrDefault.$x = self.titleViewOrDefault.$x;
-        self.subtitleViewOrDefault.$y = SUBTITLE_TOP + dy;
-        self.subtitleViewOrDefault.$width = self.titleViewOrDefault.$width;
-
-        if (self.contentView) {
-            self.contentView.$x = self.innerContentMarginLeft;
-            self.contentView.$y = TITLE_TOP + dy;
-        }
-
-        _backgroundView = [self generateBackground];
-        _backgroundView.frame = CGRectMake(0, 0, _backgroundView.image.size.width, _backgroundView.image.size.height);
-        [self addSubview:_backgroundView];
-        [self sendSubviewToBack:_backgroundView];
-    }
-    else {
-        self.contentView.$origin = CGPointMake(0, 0);
-    }
-}
-
-- (UIImageView *)generateBackground {
-    // AMAZING CoreGraphics-based replica of the system callout graphics by Nicholas Shipes: https://github.com/u10int
-
-    // We used to embed the system callout graphics as base64-encoded PNGs directly in this file, which was neat, but
-    // that limited our control the same way as the system callout - i.e. the height was always fixed. Now we can draw
-    // the callout at whatever size we want!
-
-    UIImage *image = [UIImage imageForSize:self.frame.size withDrawingBlock:^(CGContextRef context) {
-                          CGSize anchorSize = CGSizeMake (27, ANCHOR_HEIGHT);
-                          CGFloat anchorX = roundf (self.layer.anchorPoint.x * self.$width - anchorSize.width / 2);
-                          CGRect anchorRect = CGRectMake (anchorX, 0, anchorSize.width, anchorSize.height);
-
-                          // make sure the anchor is not too close to the end caps
-                          if (anchorRect.origin.x < ANCHOR_MARGIN_MIN) {
-                              anchorRect.origin.x = ANCHOR_MARGIN_MIN;
-                          }
-                          else if (anchorRect.origin.x + anchorRect.size.width > self.$width - ANCHOR_MARGIN_MIN) {
-                              anchorRect.origin.x = self.$width - anchorRect.size.width - ANCHOR_MARGIN_MIN;
-                          }
-
-                          // determine size
-                          CGFloat stroke = 1.0;
-                          CGFloat radius = [UIScreen mainScreen].scale == 1 ? 4.5:6.0;
-
-                          CGRect rect = CGRectMake (self.bounds.origin.x, self.bounds.origin.y + TOP_SHADOW_BUFFER, self.bounds.size.width, self.bounds.size.height - ANCHOR_HEIGHT);
-                          rect.size.width -= stroke + 14;
-                          rect.size.height -= stroke * 2 + TOP_SHADOW_BUFFER + BOTTOM_SHADOW_BUFFER + OFFSET_FROM_ORIGIN;
-                          rect.origin.x += stroke / 2.0 + 7;
-                          rect.origin.y += (arrowDirection == SMCalloutArrowDirectionUp) ? ANCHOR_HEIGHT - stroke / 2.0:stroke / 2.0;
-
-                          // General Declarations
-                          CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB ();
-
-                          // Color Declarations
-                          UIColor *fillBlack = [UIColor colorWithRed:0.11 green:0.11 blue:0.11 alpha:1];
-                          UIColor *shadowBlack = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.47];
-                          UIColor *glossBottom = [UIColor colorWithRed:1 green:1 blue:1 alpha:0.2];
-                          UIColor *glossTop = [UIColor colorWithRed:1 green:1 blue:1 alpha:0.85];
-                          UIColor *strokeColor = [UIColor colorWithRed:0.199 green:0.199 blue:0.199 alpha:1];
-                          UIColor *innerShadowColor = [UIColor colorWithRed:1 green:1 blue:1 alpha:0.4];
-                          UIColor *innerStrokeColor = [UIColor colorWithRed:0.821 green:0.821 blue:0.821 alpha:0.04];
-                          UIColor *outerStrokeColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.35];
-
-                          // Gradient Declarations
-                          NSArray *glossFillColors = [NSArray arrayWithObjects:
-                                                      (id)glossBottom.CGColor,
-                                                      (id)glossTop.CGColor, nil];
-                          CGFloat glossFillLocations[] = {0, 1};
-                          CGGradientRef glossFill = CGGradientCreateWithColors (colorSpace, (__bridge CFArrayRef)glossFillColors, glossFillLocations);
-
-                          // Shadow Declarations
-                          UIColor *baseShadow = shadowBlack;
-                          CGSize baseShadowOffset = CGSizeMake (0.1, 6.1);
-                          CGFloat baseShadowBlurRadius = 6;
-                          UIColor *innerShadow = innerShadowColor;
-                          CGSize innerShadowOffset = CGSizeMake (0.1, 1.1);
-                          CGFloat innerShadowBlurRadius = 1;
-
-                          CGFloat backgroundStrokeWidth = 1;
-                          CGFloat outerStrokeStrokeWidth = 1;
-
-                          // Frames
-                          CGRect frame = rect;
-                          CGRect innerFrame = CGRectMake (frame.origin.x + backgroundStrokeWidth, frame.origin.y + backgroundStrokeWidth, frame.size.width - backgroundStrokeWidth * 2, frame.size.height - backgroundStrokeWidth * 2);
-                          CGRect glossFrame = CGRectMake (frame.origin.x - backgroundStrokeWidth / 2, frame.origin.y - backgroundStrokeWidth / 2, frame.size.width + backgroundStrokeWidth, frame.size.height / 2 + backgroundStrokeWidth + 0.5);
-
-                          // // CoreGroup ////
-                          {
-                              CGContextSaveGState (context);
-                              CGContextSetAlpha (context, 0.83);
-                              CGContextBeginTransparencyLayer (context, NULL);
-
-                              // Background Drawing
-                              UIBezierPath *backgroundPath = [UIBezierPath bezierPath];
-                              [backgroundPath moveToPoint:CGPointMake (CGRectGetMinX (frame), CGRectGetMinY (frame) + radius)];
-                              [backgroundPath addLineToPoint:CGPointMake (CGRectGetMinX (frame), CGRectGetMaxY (frame) - radius)];                                                                         // left
-                              [backgroundPath addArcWithCenter:CGPointMake (CGRectGetMinX (frame) + radius, CGRectGetMaxY (frame) - radius) radius:radius startAngle:M_PI endAngle:M_PI / 2 clockwise:NO]; // bottom-left corner
-
-                                                                                                                                                                                                           // pointer down
-                              if (arrowDirection == SMCalloutArrowDirectionDown) {
-                                  [backgroundPath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect), CGRectGetMaxY (frame))];
-                                  [backgroundPath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect) + anchorRect.size.width / 2, CGRectGetMaxY (frame) + anchorRect.size.height)];
-                                  [backgroundPath addLineToPoint:CGPointMake (CGRectGetMaxX (anchorRect), CGRectGetMaxY (frame))];
-                              }
-
-                              [backgroundPath addLineToPoint:CGPointMake (CGRectGetMaxX (frame) - radius, CGRectGetMaxY (frame))];                                                                          // bottom
-                              [backgroundPath addArcWithCenter:CGPointMake (CGRectGetMaxX (frame) - radius, CGRectGetMaxY (frame) - radius) radius:radius startAngle:M_PI / 2 endAngle:0.0f clockwise:NO];  // bottom-right corner
-                              [backgroundPath addLineToPoint:CGPointMake (CGRectGetMaxX (frame), CGRectGetMinY (frame) + radius)];                                                                          // right
-                              [backgroundPath addArcWithCenter:CGPointMake (CGRectGetMaxX (frame) - radius, CGRectGetMinY (frame) + radius) radius:radius startAngle:0.0f endAngle:-M_PI / 2 clockwise:NO]; // top-right corner
-
-                                                                                                                                                                                                            // pointer up
-                              if (arrowDirection == SMCalloutArrowDirectionUp) {
-                                  [backgroundPath addLineToPoint:CGPointMake (CGRectGetMaxX (anchorRect), CGRectGetMinY (frame))];
-                                  [backgroundPath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect) + anchorRect.size.width / 2, CGRectGetMinY (frame) - anchorRect.size.height)];
-                                  [backgroundPath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect), CGRectGetMinY (frame))];
-                              }
-
-                              [backgroundPath addLineToPoint:CGPointMake (CGRectGetMinX (frame) + radius, CGRectGetMinY (frame))];                                                                          // top
-                              [backgroundPath addArcWithCenter:CGPointMake (CGRectGetMinX (frame) + radius, CGRectGetMinY (frame) + radius) radius:radius startAngle:-M_PI / 2 endAngle:M_PI clockwise:NO]; // top-left corner
-                              [backgroundPath closePath];
-                              CGContextSaveGState (context);
-                              CGContextSetShadowWithColor (context, baseShadowOffset, baseShadowBlurRadius, baseShadow.CGColor);
-                              [fillBlack setFill];
-                              [backgroundPath fill];
-
-                              // Background Inner Shadow
-                              CGRect backgroundBorderRect = CGRectInset ([backgroundPath bounds], -innerShadowBlurRadius, -innerShadowBlurRadius);
-                              backgroundBorderRect = CGRectOffset (backgroundBorderRect, -innerShadowOffset.width, -innerShadowOffset.height);
-                              backgroundBorderRect = CGRectInset (CGRectUnion (backgroundBorderRect, [backgroundPath bounds]), -1, -1);
-
-                              UIBezierPath *backgroundNegativePath = [UIBezierPath bezierPathWithRect:backgroundBorderRect];
-                              [backgroundNegativePath appendPath:backgroundPath];
-                              backgroundNegativePath.usesEvenOddFillRule = YES;
-
-                              CGContextSaveGState (context);
-                              {
-                                  CGFloat xOffset = innerShadowOffset.width + round (backgroundBorderRect.size.width);
-                                  CGFloat yOffset = innerShadowOffset.height;
-                                  CGContextSetShadowWithColor (context,
-                                                               CGSizeMake (xOffset + copysign (0.1, xOffset), yOffset + copysign (0.1, yOffset)),
-                                                               innerShadowBlurRadius,
-                                                               innerShadow.CGColor);
-
-                                  [backgroundPath addClip];
-                                  CGAffineTransform transform = CGAffineTransformMakeTranslation (-round (backgroundBorderRect.size.width), 0);
-                                  [backgroundNegativePath applyTransform:transform];
-                                  [[UIColor grayColor] setFill];
-                                  [backgroundNegativePath fill];
-                              }
-                              CGContextRestoreGState (context);
-
-                              CGContextRestoreGState (context);
-
-                              [strokeColor setStroke];
-                              backgroundPath.lineWidth = backgroundStrokeWidth;
-                              [backgroundPath stroke];
-
-                              // Inner Stroke Drawing
-                              CGFloat innerRadius = radius - 1.0;
-                              CGRect anchorInnerRect = anchorRect;
-                              anchorInnerRect.origin.x += backgroundStrokeWidth / 2;
-                              anchorInnerRect.origin.y -= backgroundStrokeWidth / 2;
-                              anchorInnerRect.size.width -= backgroundStrokeWidth;
-                              anchorInnerRect.size.height -= backgroundStrokeWidth / 2;
-
-                              UIBezierPath *innerStrokePath = [UIBezierPath bezierPath];
-                              [innerStrokePath moveToPoint:CGPointMake (CGRectGetMinX (innerFrame), CGRectGetMinY (innerFrame) + innerRadius)];
-                              [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (innerFrame), CGRectGetMaxY (innerFrame) - innerRadius)];                                                                                   // left
-                              [innerStrokePath addArcWithCenter:CGPointMake (CGRectGetMinX (innerFrame) + innerRadius, CGRectGetMaxY (innerFrame) - innerRadius) radius:innerRadius startAngle:M_PI endAngle:M_PI / 2 clockwise:NO]; // bottom-left corner
-
-                                                                                                                                                                                                                                     // pointer down
-                              if (arrowDirection == SMCalloutArrowDirectionDown) {
-                                  [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorInnerRect), CGRectGetMaxY (innerFrame))];
-                                  [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorInnerRect) + anchorInnerRect.size.width / 2, CGRectGetMaxY (innerFrame) + anchorInnerRect.size.height)];
-                                  [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (anchorInnerRect), CGRectGetMaxY (innerFrame))];
-                              }
-
-                              [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (innerFrame) - innerRadius, CGRectGetMaxY (innerFrame))];                                                                                    // bottom
-                              [innerStrokePath addArcWithCenter:CGPointMake (CGRectGetMaxX (innerFrame) - innerRadius, CGRectGetMaxY (innerFrame) - innerRadius) radius:innerRadius startAngle:M_PI / 2 endAngle:0.0f clockwise:NO];  // bottom-right corner
-                              [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (innerFrame), CGRectGetMinY (innerFrame) + innerRadius)];                                                                                    // right
-                              [innerStrokePath addArcWithCenter:CGPointMake (CGRectGetMaxX (innerFrame) - innerRadius, CGRectGetMinY (innerFrame) + innerRadius) radius:innerRadius startAngle:0.0f endAngle:-M_PI / 2 clockwise:NO]; // top-right corner
-
-                                                                                                                                                                                                                                      // pointer up
-                              if (arrowDirection == SMCalloutArrowDirectionUp) {
-                                  [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (anchorInnerRect), CGRectGetMinY (innerFrame))];
-                                  [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorInnerRect) + anchorRect.size.width / 2, CGRectGetMinY (innerFrame) - anchorInnerRect.size.height)];
-                                  [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorInnerRect), CGRectGetMinY (innerFrame))];
-                              }
-
-                              [innerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (innerFrame) + innerRadius, CGRectGetMinY (innerFrame))];                                                                                    // top
-                              [innerStrokePath addArcWithCenter:CGPointMake (CGRectGetMinX (innerFrame) + innerRadius, CGRectGetMinY (innerFrame) + innerRadius) radius:innerRadius startAngle:-M_PI / 2 endAngle:M_PI clockwise:NO]; // top-left corner
-                              [innerStrokePath closePath];
-
-                              [innerStrokeColor setStroke];
-                              innerStrokePath.lineWidth = backgroundStrokeWidth;
-                              [innerStrokePath stroke];
-
-                              // // GlossGroup ////
-                              {
-                                  CGContextSaveGState (context);
-                                  CGContextSetAlpha (context, 0.45);
-                                  CGContextBeginTransparencyLayer (context, NULL);
-
-                                  CGFloat glossRadius = radius + 0.5;
-
-                                  // Gloss Drawing
-                                  UIBezierPath *glossPath = [UIBezierPath bezierPath];
-                                  [glossPath moveToPoint:CGPointMake (CGRectGetMinX (glossFrame), CGRectGetMinY (glossFrame))];
-                                  [glossPath addLineToPoint:CGPointMake (CGRectGetMinX (glossFrame), CGRectGetMaxY (glossFrame) - glossRadius)];                                                                                    // left
-                                  [glossPath addArcWithCenter:CGPointMake (CGRectGetMinX (glossFrame) + glossRadius, CGRectGetMaxY (glossFrame) - glossRadius) radius:glossRadius startAngle:M_PI endAngle:M_PI / 2 clockwise:NO];  // bottom-left corner
-                                  [glossPath addLineToPoint:CGPointMake (CGRectGetMaxX (glossFrame) - glossRadius, CGRectGetMaxY (glossFrame))];                                                                                    // bottom
-                                  [glossPath addArcWithCenter:CGPointMake (CGRectGetMaxX (glossFrame) - glossRadius, CGRectGetMaxY (glossFrame) - glossRadius) radius:glossRadius startAngle:M_PI / 2 endAngle:0.0f clockwise:NO];  // bottom-right corner
-                                  [glossPath addLineToPoint:CGPointMake (CGRectGetMaxX (glossFrame), CGRectGetMinY (glossFrame) - glossRadius)];                                                                                    // right
-                                  [glossPath addArcWithCenter:CGPointMake (CGRectGetMaxX (glossFrame) - glossRadius, CGRectGetMinY (glossFrame) + glossRadius) radius:glossRadius startAngle:0.0f endAngle:-M_PI / 2 clockwise:NO]; // top-right corner
-
-                                                                                                                                                                                                                                    // pointer up
-                                  if (arrowDirection == SMCalloutArrowDirectionUp) {
-                                      [glossPath addLineToPoint:CGPointMake (CGRectGetMaxX (anchorRect), CGRectGetMinY (glossFrame))];
-                                      [glossPath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect) + roundf (anchorRect.size.width / 2), CGRectGetMinY (glossFrame) - anchorRect.size.height)];
-                                      [glossPath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect), CGRectGetMinY (glossFrame))];
-                                  }
-
-                                  [glossPath addLineToPoint:CGPointMake (CGRectGetMinX (glossFrame) + glossRadius, CGRectGetMinY (glossFrame))];                                                                                    // top
-                                  [glossPath addArcWithCenter:CGPointMake (CGRectGetMinX (glossFrame) + glossRadius, CGRectGetMinY (glossFrame) + glossRadius) radius:glossRadius startAngle:-M_PI / 2 endAngle:M_PI clockwise:NO]; // top-left corner
-                                  [glossPath closePath];
-
-                                  CGContextSaveGState (context);
-                                  [glossPath addClip];
-                                  CGRect glossBounds = glossPath.bounds;
-                                  CGContextDrawLinearGradient (context, glossFill,
-                                                               CGPointMake (CGRectGetMidX (glossBounds), CGRectGetMaxY (glossBounds)),
-                                                               CGPointMake (CGRectGetMidX (glossBounds), CGRectGetMinY (glossBounds)),
-                                                               0);
-                                  CGContextRestoreGState (context);
-
-                                  CGContextEndTransparencyLayer (context);
-                                  CGContextRestoreGState (context);
-                              }
-
-                              CGContextEndTransparencyLayer (context);
-                              CGContextRestoreGState (context);
-                          }
-
-                          // Outer Stroke Drawing
-                          UIBezierPath *outerStrokePath = [UIBezierPath bezierPath];
-                          [outerStrokePath moveToPoint:CGPointMake (CGRectGetMinX (frame), CGRectGetMinY (frame) + radius)];
-                          [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (frame), CGRectGetMaxY (frame) - radius)];                                                                         // left
-                          [outerStrokePath addArcWithCenter:CGPointMake (CGRectGetMinX (frame) + radius, CGRectGetMaxY (frame) - radius) radius:radius startAngle:M_PI endAngle:M_PI / 2 clockwise:NO]; // bottom-left corner
-
-                                                                                                                                                                                                        // pointer down
-                          if (arrowDirection == SMCalloutArrowDirectionDown) {
-                              [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect), CGRectGetMaxY (frame))];
-                              [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect) + anchorRect.size.width / 2, CGRectGetMaxY (frame) + anchorRect.size.height)];
-                              [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (anchorRect), CGRectGetMaxY (frame))];
-                          }
-
-                          [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (frame) - radius, CGRectGetMaxY (frame))];                                                                          // bottom
-                          [outerStrokePath addArcWithCenter:CGPointMake (CGRectGetMaxX (frame) - radius, CGRectGetMaxY (frame) - radius) radius:radius startAngle:M_PI / 2 endAngle:0.0f clockwise:NO];  // bottom-right corner
-                          [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (frame), CGRectGetMinY (frame) + radius)];                                                                          // right
-                          [outerStrokePath addArcWithCenter:CGPointMake (CGRectGetMaxX (frame) - radius, CGRectGetMinY (frame) + radius) radius:radius startAngle:0.0f endAngle:-M_PI / 2 clockwise:NO]; // top-right corner
-
-                                                                                                                                                                                                         // pointer up
-                          if (arrowDirection == SMCalloutArrowDirectionUp) {
-                              [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMaxX (anchorRect), CGRectGetMinY (frame))];
-                              [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect) + anchorRect.size.width / 2, CGRectGetMinY (frame) - anchorRect.size.height)];
-                              [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (anchorRect), CGRectGetMinY (frame))];
-                          }
-
-                          [outerStrokePath addLineToPoint:CGPointMake (CGRectGetMinX (frame) + radius, CGRectGetMinY (frame))];                                                                          // top
-                          [outerStrokePath addArcWithCenter:CGPointMake (CGRectGetMinX (frame) + radius, CGRectGetMinY (frame) + radius) radius:radius startAngle:-M_PI / 2 endAngle:M_PI clockwise:NO]; // top-left corner
-                          [outerStrokePath closePath];
-                          CGContextSaveGState (context);
-                          CGContextSetShadowWithColor (context, baseShadowOffset, baseShadowBlurRadius, baseShadow.CGColor);
-                          CGContextRestoreGState (context);
-
-                          [outerStrokeColor setStroke];
-                          outerStrokePath.lineWidth = outerStrokeStrokeWidth;
-                          [outerStrokePath stroke];
-
-                          // // Cleanup
-                          CGGradientRelease (glossFill);
-                          CGColorSpaceRelease (colorSpace);
-                      }];
-
-    return [[UIImageView alloc] initWithImage:image];
-}
-
-@end
-
-//
-// Our UIView frame helpers implementation
-//
-
-@implementation UIView (SMFrameAdditions)
-
-- (CGPoint)$origin {
-    return self.frame.origin;
-}
-
-- (void)set$origin:(CGPoint)origin {
-    self.frame = (CGRect) {.origin = origin, .size = self.frame.size};
-}
-
-- (CGFloat)$x {
-    return self.frame.origin.x;
-}
-
-- (void)set$x:(CGFloat)x {
-    self.frame = (CGRect) {.origin.x = x, .origin.y = self.frame.origin.y, .size = self.frame.size};
-}
-
-- (CGFloat)$y {
-    return self.frame.origin.y;
-}
-
-- (void)set$y:(CGFloat)y {
-    self.frame = (CGRect) {.origin.x = self.frame.origin.x, .origin.y = y, .size = self.frame.size};
-}
-
-- (CGSize)$size {
-    return self.frame.size;
-}
-
-- (void)set$size:(CGSize)size {
-    self.frame = (CGRect) {.origin = self.frame.origin, .size = size};
-}
-
-- (CGFloat)$width {
-    return self.frame.size.width;
-}
-
-- (void)set$width:(CGFloat)width {
-    self.frame = (CGRect) {.origin = self.frame.origin, .size.width = width, .size.height = self.frame.size.height};
-}
-
-- (CGFloat)$height {
-    return self.frame.size.height;
-}
-
-- (void)set$height:(CGFloat)height {
-    self.frame = (CGRect) {.origin = self.frame.origin, .size.width = self.frame.size.width, .size.height = height};
-}
-
-- (CGFloat)$left {
-    return self.frame.origin.x;
-}
-
-- (void)set$left:(CGFloat)left {
-    self.frame = (CGRect) {.origin.x = left, .origin.y = self.frame.origin.y, .size.width = fmaxf(self.frame.origin.x + self.frame.size.width - left, 0), .size.height = self.frame.size.height};
-}
-
-- (CGFloat)$top {
-    return self.frame.origin.y;
-}
-
-- (void)set$top:(CGFloat)top {
-    self.frame = (CGRect) {.origin.x = self.frame.origin.x, .origin.y = top, .size.width = self.frame.size.width, .size.height = fmaxf(self.frame.origin.y + self.frame.size.height - top, 0)};
-}
-
-- (CGFloat)$right {
-    return self.frame.origin.x + self.frame.size.width;
-}
-
-- (void)set$right:(CGFloat)right {
-    self.frame = (CGRect) {.origin = self.frame.origin, .size.width = fmaxf(right - self.frame.origin.x, 0), .size.height = self.frame.size.height};
-}
-
-- (CGFloat)$bottom {
-    return self.frame.origin.y + self.frame.size.height;
-}
-
-- (void)set$bottom:(CGFloat)bottom {
-    self.frame = (CGRect) {.origin = self.frame.origin, .size.width = self.frame.size.width, .size.height = fmaxf(bottom - self.frame.origin.y, 0)};
+    self.contentView.$origin = CGPointMake(0, 0);
 }
 
 @end
