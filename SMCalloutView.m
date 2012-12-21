@@ -1,6 +1,5 @@
 #import "SMCalloutView.h"
 #import <QuartzCore/QuartzCore.h>
-#import "UIImageExtensions.h"
 #import "UIView+Shortcuts.h"
 
 //
