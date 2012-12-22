@@ -1,7 +1,6 @@
 #import "AppDelegate.h"
 #import <QuartzCore/QuartzCore.h>
 #import "CustomPinAnnotationView.h"
-#import "UIViewExtensions.h"
 
 @interface MKMapView(CalloutHitDetection)
 
