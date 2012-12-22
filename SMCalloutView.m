@@ -275,6 +275,12 @@ NSTimeInterval kSMCalloutViewRepositionDelayForUIScrollView = 1.0 / 3.0;
 }
 
 #pragma mark - callout dismissal
+#warning "remove maybe"
+- (UIView *) hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *view = [super hitTest:point withEvent:event];
+    return view;
+}
+
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
     // we want to match the system callout view, which doesn't "capture" touches outside the accessory areas. This way you can click on other pins and things *behind* a translucent callout.
     return [self.contentView pointInside:[self.contentView convertPoint:point fromView:self] withEvent:nil];

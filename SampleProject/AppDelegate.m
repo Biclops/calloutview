@@ -1,5 +1,38 @@
 #import "AppDelegate.h"
 #import <QuartzCore/QuartzCore.h>
+#import "CustomPinAnnotationView.h"
+#import "UIViewExtensions.h"
+
+@interface MKMapView(CalloutHitDetection)
+
+@end
+
+@implementation MKMapView(CalloutHitDetection)
+
+- (UIView *) hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *view = [super hitTest:point withEvent:event];
+
+    // blocks propogation of touches if it hits the content view or any of it's descendents
+    if([view isKindOfClass:[MKAnnotationView class]] == NO &&
+       [view isKindOfClass:[UIControl class]] == NO) {
+        UIView *iter = view;
+        while (iter.superview) {
+            if([iter.superview isKindOfClass:[SMCalloutView class]]) {
+                if([iter isKindOfClass:[UIButton class]] == NO) {
+                    view = nil;
+                    break;
+                }
+            }
+            else {
+                iter = iter.superview;
+            }
+        }
+    }
+    
+    return view;
+}
+
+@end
 
 @implementation AppDelegate {
     SMCalloutView *calloutView;
@@ -26,10 +59,25 @@
     
     // custom view to be used in our callout
     UIView *customView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 250, 50)];
+    customView.tag = 666;
     customView.backgroundColor = [UIColor whiteColor];
     customView.layer.borderColor = [UIColor blackColor].CGColor;
     customView.layer.borderWidth = 1;
     customView.layer.cornerRadius = 4;
+    
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    [button addTarget:self action:@selector(handleButton:) forControlEvents:UIControlEventTouchUpInside];
+    button.frame = CGRectMake(10, 10, 30, 30);
+    [customView addSubview:button];
+    
+    UIView *customView2 = [[UIView alloc] initWithFrame:CGRectMake(110, 10, 30, 30)];
+    customView2.tag = 777;
+    customView2.backgroundColor = [UIColor orangeColor];
+    customView2.layer.borderColor = [UIColor blackColor].CGColor;
+    customView2.layer.borderWidth = 1;
+    customView2.layer.cornerRadius = 4;
+    [customView addSubview:customView2];
+    
     calloutView.contentView = customView;
     
     //
@@ -107,13 +155,14 @@
 }
 
 - (void)mapView:(MKMapView *)mapView didDeselectAnnotationView:(MKAnnotationView *)view {
-    // again, we'll introduce an artifical delay to feel more like MKMapView for this demonstration.
-    [calloutView performSelector:@selector(dismissCalloutAnimated:) withObject:nil afterDelay:1.0/3.0];
+    if([view isKindOfClass:[CustomPinAnnotationView class]]) {
+        // again, we'll introduce an artifical delay to feel more like MKMapView for this demonstration.
+        [calloutView performSelector:@selector(dismissCalloutAnimated:) withObject:nil afterDelay:1.0/3.0];
+    }
 }
 
 #pragma mark - SMCalloutView
 - (void)popupMapCalloutView:(CustomPinAnnotationView *)annotationView {
-    
     calloutView.calloutOffset = CGPointMake(-annotationView.calloutOffset.x, -7.0f);
     
     annotationView.calloutView = calloutView;
@@ -150,17 +199,11 @@
     [calloutView dismissCalloutAnimated:NO];
 }
 
+- (void)handleButton:(UIButton *)button {
+    NSLog(@"handleButton");
+}
+
 @end
 
 @implementation MapAnnotation
-@end
-
-@implementation CustomPinAnnotationView
-
-// See this for more information: https://github.com/nfarina/calloutview/pull/9
-- (UIView *) hitTest:(CGPoint)point withEvent:(UIEvent *)event {
-    UIView *calloutMaybe = [self.calloutView hitTest:[self.calloutView convertPoint:point fromView:self] withEvent:event];
-    return calloutMaybe ?: [super hitTest:point withEvent:event];
-}
-
 @end

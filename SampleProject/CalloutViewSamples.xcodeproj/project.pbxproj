@@ -18,6 +18,7 @@
 		01A6EE6515D49BD500E895D6 /* SMCalloutView.m in Sources */ = {isa = PBXBuildFile; fileRef = 01A6EE6415D49BD500E895D6 /* SMCalloutView.m */; };
 		01A6EE7915D572C300E895D6 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 01A6EE7815D572C300E895D6 /* QuartzCore.framework */; };
 		9BE22B491683E7E500953375 /* UIView+Shortcuts.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BE22B481683E7E500953375 /* UIView+Shortcuts.m */; };
+		9BE22B4D168520E800953375 /* CustomPinAnnotationView.m in Sources */ = {isa = PBXBuildFile; fileRef = 9BE22B4C168520E800953375 /* CustomPinAnnotationView.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,8 @@
 		01A6EE7815D572C300E895D6 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		9BE22B471683E7E500953375 /* UIView+Shortcuts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "UIView+Shortcuts.h"; path = "../UIView+Shortcuts.h"; sourceTree = "<group>"; };
 		9BE22B481683E7E500953375 /* UIView+Shortcuts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "UIView+Shortcuts.m"; path = "../UIView+Shortcuts.m"; sourceTree = "<group>"; };
+		9BE22B4B168520E800953375 /* CustomPinAnnotationView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CustomPinAnnotationView.h; sourceTree = "<group>"; };
+		9BE22B4C168520E800953375 /* CustomPinAnnotationView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CustomPinAnnotationView.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,6 +107,8 @@
 				01A6EE6415D49BD500E895D6 /* SMCalloutView.m */,
 				9BE22B471683E7E500953375 /* UIView+Shortcuts.h */,
 				9BE22B481683E7E500953375 /* UIView+Shortcuts.m */,
+				9BE22B4B168520E800953375 /* CustomPinAnnotationView.h */,
+				9BE22B4C168520E800953375 /* CustomPinAnnotationView.m */,
 			);
 			name = "Callout View";
 			sourceTree = "<group>";
@@ -186,6 +191,7 @@
 				017FD73F15D317B1006825B3 /* AppDelegate.m in Sources */,
 				017FD74015D317B1006825B3 /* main.m in Sources */,
 				9BE22B491683E7E500953375 /* UIView+Shortcuts.m in Sources */,
+				9BE22B4D168520E800953375 /* CustomPinAnnotationView.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
